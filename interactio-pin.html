@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactio — Animez vos sessions</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #0f0e17;
+    --paper: #fffcf5;
+    --cream: #f5f0e8;
+    --accent: #ff6b35;
+    --accent2: #2ec4b6;
+    --accent3: #e63946;
+    --accent4: #8338ec;
+    --gold: #ffd166;
+    --mid: #6b7280;
+    --border: #e5ddd0;
+    --shadow: 0 4px 24px rgba(15,14,23,0.08);
+    --shadow-lg: 0 12px 48px rgba(15,14,23,0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  h1,h2,h3 { font-family: 'Syne', sans-serif; }
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: block; }
+
+  /* CONFIG BANNER */
+  #configBanner { background: #fff3cd; border-bottom: 2px solid #ffc107; padding: 12px 24px;
+    font-size: 0.88rem; color: #664d03; display: flex; align-items: center; justify-content: center;
+    gap: 12px; flex-wrap: wrap; text-align: center; }
+  #configBanner strong { font-family: 'Syne', sans-serif; }
+  .config-form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .config-input { padding: 7px 12px; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.85rem;
+    font-family: monospace; width: 280px; background: white; outline: none; }
+  .config-btn { background: var(--ink); color: white; border: none; padding: 7px 16px; border-radius: 8px;
+    cursor: pointer; font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; }
+
+  /* HOME */
+  #home { background: var(--ink); color: var(--paper); position: relative; overflow: hidden; }
+  .home-bg { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 80% 60% at 70% 20%, #2ec4b622 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 10% 80%, #ff6b3522 0%, transparent 50%),
+                radial-gradient(ellipse 40% 50% at 90% 70%, #8338ec18 0%, transparent 50%); }
+  .home-grid { position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px; }
+  .home-inner { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 60px 32px 80px; }
+  .home-logo { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 80px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .home-tag { display: inline-block; background: rgba(255,107,53,0.18); color: var(--accent);
+    font-size: 0.78rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 100px; margin-bottom: 24px; border: 1px solid rgba(255,107,53,0.3); }
+  .home-title { font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight: 800; line-height: 1.0;
+    letter-spacing: -0.03em; margin-bottom: 20px; }
+  .home-title span { color: var(--accent); }
+  .home-subtitle { font-size: 1.15rem; color: rgba(255,252,245,0.6); max-width: 480px; line-height: 1.7;
+    font-weight: 300; margin-bottom: 48px; }
+  .home-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 700px; }
+  @media(max-width:560px) { .home-actions { grid-template-columns: 1fr; } }
+  .home-btn { background: rgba(255,252,245,0.06); border: 1px solid rgba(255,252,245,0.12);
+    border-radius: 16px; padding: 28px 28px 24px; cursor: pointer; transition: all 0.25s; text-align: left; }
+  .home-btn:hover { background: rgba(255,252,245,0.1); border-color: rgba(255,252,245,0.25);
+    transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  .home-btn.primary { background: var(--accent); border-color: var(--accent); grid-column: span 2; }
+  @media(max-width:560px) { .home-btn.primary { grid-column: span 1; } }
+  .home-btn.primary:hover { filter: brightness(1.05); }
+  .btn-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 16px; }
+  .btn-label { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--paper); margin-bottom: 5px; }
+  .btn-desc { font-size: 0.82rem; color: rgba(255,252,245,0.5); font-weight: 300; line-height: 1.4; }
+
+  /* NAV */
+  .nav-bar { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px;
+    border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+  .nav-logo { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; }
+  .back-btn { display: flex; align-items: center; gap: 8px; background: none; border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 100px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem; color: var(--mid); transition: all 0.2s; }
+  .back-btn:hover { background: var(--cream); color: var(--ink); }
+
+  /* PARTICIPATE */
+  #participate .content-wrap { max-width: 480px; margin: 0 auto; padding: 60px 24px; text-align: center; }
+  .screen-eyebrow { font-size: 0.78rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px; }
+  .screen-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.02em; }
+  .screen-sub { color: var(--mid); font-size: 0.95rem; margin-bottom: 40px; line-height: 1.6; }
+  .code-input-wrap { display: flex; border: 2px solid var(--ink); border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+  .code-input { flex: 1; padding: 16px 20px; border: none; font-family: 'Syne', sans-serif;
+    font-size: 1.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+    text-align: center; background: transparent; outline: none; color: var(--ink); }
+  .code-input::placeholder { color: var(--border); font-size: 1.2rem; }
+  .btn-primary { background: var(--ink); color: var(--paper); border: none; padding: 16px 28px;
+    font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-primary:hover { background: #2a2933; }
+  .error-msg { color: var(--accent3); font-size: 0.85rem; margin-top: 8px; }
+
+  /* PIN MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(15,14,23,0.7); z-index: 500;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box { background: var(--paper); border-radius: 24px; padding: 40px 36px; max-width: 400px;
+    width: 100%; box-shadow: var(--shadow-lg); position: relative; transform: translateY(20px); transition: transform 0.25s; }
+  .modal-overlay.open .modal-box { transform: translateY(0); }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
+  .modal-sub { font-size: 0.88rem; color: var(--mid); margin-bottom: 28px; line-height: 1.5; }
+  .pin-display { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
+  .pin-dot { width: 52px; height: 64px; border: 2px solid var(--border); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800;
+    transition: all 0.15s; background: white; color: var(--ink); }
+  .pin-dot.filled { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .pin-dot.error { border-color: var(--accent3); background: rgba(230,57,70,0.08); color: var(--accent3); animation: shake 0.3s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pin-key { background: white; border: 1.5px solid var(--border); border-radius: 12px; padding: 16px;
+    font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; text-align: center; }
+  .pin-key:hover { background: var(--cream); border-color: var(--ink); }
+  .pin-key:active { transform: scale(0.95); }
+  .pin-key.del { font-size: 1rem; color: var(--mid); }
+  .pin-key.wide { grid-column: span 3; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .pin-key.wide:hover { background: #2a2933; }
+  .modal-hint { text-align: center; font-size: 0.8rem; color: var(--mid); margin-top: 16px; }
+  .modal-hint a { color: var(--accent); cursor: pointer; }
+  .pin-hint-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; background: var(--paper);
+    outline: none; color: var(--ink); transition: border-color 0.2s; margin-bottom: 16px; }
+  .pin-hint-input:focus { border-color: var(--ink); }
+  .lock-msg { background: rgba(230,57,70,0.08); border: 1px solid rgba(230,57,70,0.25);
+    border-radius: 10px; padding: 12px 16px; font-size: 0.85rem; color: var(--accent3);
+    margin-bottom: 16px; text-align: center; }
+  .attempts-bar { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
+  .attempt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .attempt-dot.used { background: var(--accent3); }
+
+  /* CREATE */
+  #create .content-wrap { max-width: 880px; margin: 0 auto; padding: 48px 24px 80px; }
+  .type-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 40px; }
+  @media(max-width:600px) { .type-grid { grid-template-columns: 1fr; } }
+  .type-card { border: 2px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer;
+    transition: all 0.22s; background: white; position: relative; overflow: hidden; }
+  .type-card::after { content:''; position:absolute; top:0;left:0;right:0;height:3px;
+    background:var(--card-color,var(--accent)); transform:scaleX(0); transform-origin:left; transition:transform 0.25s; }
+  .type-card:hover::after,.type-card.selected::after { transform:scaleX(1); }
+  .type-card:hover { border-color:var(--card-color,var(--accent)); box-shadow:var(--shadow); }
+  .type-card.selected { border-color:var(--card-color,var(--accent)); background:var(--cream); }
+  .type-icon { width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:14px;color:white; }
+  .type-name { font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:5px; }
+  .type-desc { font-size:0.83rem;color:var(--mid);line-height:1.5; }
+  .editor-section { display:none; }
+  .editor-section.visible { display:block; }
+  .editor-card { background:white;border:1px solid var(--border);border-radius:16px;padding:32px;margin-bottom:20px;box-shadow:var(--shadow); }
+  .field-label { font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.05em;
+    text-transform:uppercase;color:var(--mid);margin-bottom:8px;display:block; }
+  .field-input { width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:10px;
+    font-family:'DM Sans',sans-serif;font-size:1rem;background:var(--paper);outline:none;color:var(--ink);transition:border-color 0.2s; }
+  .field-input:focus { border-color:var(--ink); }
+  .field-input.lg { font-size:1.15rem;font-weight:500; }
+  .answer-row { display:flex;gap:10px;align-items:center;margin-bottom:8px; }
+  .correct-check { width:18px;height:18px;accent-color:var(--accent2);cursor:pointer;flex-shrink:0; }
+  .del-btn { background:none;border:none;cursor:pointer;color:var(--mid);font-size:1.1rem;padding:4px;transition:color 0.2s; }
+  .del-btn:hover { color:var(--accent3); }
+  .add-btn { display:flex;align-items:center;gap:8px;background:none;border:1.5px dashed var(--border);
+    padding:10px 16px;border-radius:10px;cursor:pointer;color:var(--mid);font-family:'DM Sans',sans-serif;
+    font-size:0.9rem;transition:all 0.2s;width:100%;justify-content:center;margin-top:8px; }
+  .add-btn:hover { border-color:var(--ink);color:var(--ink);background:var(--cream); }
+  .submit-row { display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap; }
+  .btn-save { background:var(--ink);color:var(--paper);border:none;padding:14px 32px;border-radius:12px;
+    font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+  .btn-save:hover { background:#2a2933;transform:translateY(-1px);box-shadow:0 6px 20px rgba(15,14,23,0.18); }
+  .btn-save:disabled { opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none; }
+  .btn-outline { background:transparent;color:var(--mid);border:1.5px solid var(--border);padding:13px 24px;
+    border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.95rem;cursor:pointer;transition:all 0.2s; }
+  .btn-outline:hover { border-color:var(--ink);color:var(--ink); }
+  .q-block { border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px; }
+
+  /* SESSION */
+  #session { background:var(--ink);color:var(--paper); }
+  .session-top { display:flex;align-items:center;justify-content:space-between;padding:20px 32px;
+    border-bottom:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;gap:12px; }
+  .session-logo { font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem; }
+  .session-code-badge { display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 20px; }
+  .session-code-label { font-size:0.75rem;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase; }
+  .session-code-value { font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;letter-spacing:0.15em;color:var(--gold); }
+  .copy-code { background:none;border:none;cursor:pointer;color:var(--gold);font-size:0.85rem;padding:4px 8px;border-radius:6px;transition:background 0.2s; }
+  .copy-code:hover { background:rgba(255,209,102,0.12); }
+  .session-body { max-width:900px;margin:0 auto;padding:48px 24px; }
+  .session-qr-area { display:flex;gap:32px;align-items:flex-start;margin-bottom:48px;flex-wrap:wrap; }
+  .qr-box { background:white;border-radius:16px;padding:16px;width:160px;flex-shrink:0;
+    display:flex;flex-direction:column;align-items:center;gap:8px; }
+  .qr-img { width:128px;height:128px; }
+  .qr-code-text { font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--ink);letter-spacing:0.1em; }
+  .session-info { flex:1;min-width:200px; }
+  .session-title-big { font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:10px;letter-spacing:-0.02em; }
+  .session-type-badge { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;font-size:.8rem;font-weight:500;margin-bottom:16px; }
+  .session-url { font-size:0.88rem;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.06);padding:10px 14px;border-radius:8px;font-family:monospace; }
+  .participants-bar { display:flex;align-items:center;gap:16px;background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 24px;margin-bottom:32px; }
+  .part-count { font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;color:var(--gold); }
+  .part-label { font-size:0.88rem;color:rgba(255,255,255,0.5); }
+  .live-dot { width:10px;height:10px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite;flex-shrink:0; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+  .live-text { font-size:0.82rem;color:#22c55e;font-weight:500; }
+  .session-controls { display:flex;gap:12px;flex-wrap:wrap; }
+  .btn-launch { background:var(--accent);color:white;border:none;padding:14px 32px;border-radius:12px;
+    font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+  .btn-launch:hover { filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 6px 24px rgba(255,107,53,0.35); }
+  .btn-launch:disabled { opacity:0.5;cursor:not-allowed;transform:none;filter:none; }
+  .btn-session-outline { background:transparent;color:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.18);
+    padding:13px 24px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.95rem;cursor:pointer;transition:all 0.2s; }
+  .btn-session-outline:hover { border-color:rgba(255,255,255,0.4);color:white; }
+
+  /* LIVE */
+  #live { background:var(--ink);color:var(--paper); }
+  .live-header { padding:20px 32px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;gap:12px; }
+  .live-badge { display:flex;align-items:center;gap:8px;background:rgba(34,197,94,0.12);
+    border:1px solid rgba(34,197,94,0.3);padding:6px 14px;border-radius:100px;font-size:0.82rem;color:#22c55e;font-weight:500; }
+  .live-body { max-width:900px;margin:0 auto;padding:40px 24px; }
+  .live-question { font-family:'Syne',sans-serif;font-size:clamp(1.5rem,4vw,2.4rem);font-weight:800;
+    letter-spacing:-0.02em;text-align:center;margin-bottom:40px;line-height:1.2; }
+  .results-grid { display:flex;flex-direction:column;gap:12px;margin-bottom:40px; }
+  .result-bar-row { display:flex;align-items:center;gap:16px; }
+  .result-label { flex:0 0 200px;font-size:0.92rem;text-align:right;color:rgba(255,255,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .bar-track { flex:1;background:rgba(255,255,255,0.08);border-radius:100px;overflow:hidden;height:40px; }
+  .bar-fill { height:100%;border-radius:100px;background:var(--bar-color,var(--accent));
+    transition:width 0.7s cubic-bezier(0.16,1,0.3,1);display:flex;align-items:center;justify-content:flex-end;padding-right:12px;min-width:2px; }
+  .bar-count { font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;color:white; }
+  .result-pct { font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--gold);flex:0 0 52px; }
+  .word-cloud { display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:20px; }
+  .word-pill { padding:8px 18px;border-radius:100px;font-family:'Syne',sans-serif;font-weight:700;
+    animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+  @keyframes popIn { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+  .ideas-grid { display:flex;flex-wrap:wrap;gap:10px;justify-content:center; }
+  .idea-card { background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;padding:12px 18px;font-size:0.92rem;line-height:1.4;max-width:240px;
+    animation:slideUp 0.3s ease both; }
+  @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  /* ACTIVITY */
+  #activity { background:var(--paper); }
+  .activity-header { background:var(--ink);color:var(--paper);padding:16px 24px;display:flex;align-items:center;justify-content:space-between; }
+  .activity-body { max-width:640px;margin:0 auto;padding:40px 24px; }
+  .activity-type-tag { display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:.8rem;font-weight:600;margin-bottom:16px; }
+  .activity-question { font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;margin-bottom:28px; }
+  .poll-options { display:flex;flex-direction:column;gap:10px;margin-bottom:28px; }
+  .poll-option { display:flex;align-items:center;gap:14px;padding:16px 20px;border:2px solid var(--border);
+    border-radius:12px;cursor:pointer;transition:all 0.2s;background:white;font-size:1rem; }
+  .poll-option:hover { border-color:var(--ink);background:var(--cream); }
+  .poll-option.selected { border-color:var(--accent);background:rgba(255,107,53,0.06); }
+  .option-letter { width:32px;height:32px;border-radius:8px;background:var(--cream);display:flex;align-items:center;
+    justify-content:center;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;flex-shrink:0; }
+  .poll-option.selected .option-letter { background:var(--accent);color:white; }
+  .text-response { width:100%;padding:16px;border:2px solid var(--border);border-radius:12px;
+    font-family:'DM Sans',sans-serif;font-size:1rem;background:white;outline:none;resize:vertical;
+    min-height:100px;color:var(--ink);transition:border-color 0.2s; }
+  .text-response:focus { border-color:var(--ink); }
+  .btn-submit { width:100%;background:var(--ink);color:var(--paper);border:none;padding:16px;
+    border-radius:12px;font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+  .btn-submit:hover { background:#2a2933; }
+  .feedback-wrap { text-align:center;padding:32px; }
+  .feedback-big { font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:8px; }
+  .feedback-big.correct { color:#22c55e; }
+  .feedback-big.wrong { color:var(--accent3); }
+  .feedback-big.sent { color:var(--accent2); }
+  .waiting-wrap { text-align:center;padding:60px 24px; }
+  .spinner { width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);
+    border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 24px; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* DASHBOARD */
+  #dashboard { background:var(--paper); }
+  .dash-body { max-width:1000px;margin:0 auto;padding:40px 24px; }
+  .dash-header-row { display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px; }
+  .dash-title { font-size:1.8rem;font-weight:800;letter-spacing:-0.02em; }
+  .animator-badge { display:flex;align-items:center;gap:10px;background:rgba(255,107,53,0.08);
+    border:1px solid rgba(255,107,53,0.2);border-radius:100px;padding:8px 16px; }
+  .animator-badge-icon { font-size:1.1rem; }
+  .animator-badge-label { font-size:0.82rem;color:var(--mid); }
+  .animator-badge-id { font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;color:var(--accent); }
+  .interaction-list { display:flex;flex-direction:column;gap:12px; }
+  .interaction-item { background:white;border:1px solid var(--border);border-radius:14px;padding:20px 24px;
+    display:flex;align-items:center;gap:16px;transition:box-shadow 0.2s;cursor:pointer; }
+  .interaction-item:hover { box-shadow:var(--shadow); }
+  .item-icon { width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0; }
+  .item-info { flex:1; }
+  .item-name { font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:3px; }
+  .item-meta { font-size:0.82rem;color:var(--mid); }
+  .item-code { font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:0.1em;
+    color:var(--accent);background:rgba(255,107,53,0.08);padding:6px 12px;border-radius:8px; }
+  .item-actions { display:flex;gap:8px; }
+  .icon-btn { width:36px;height:36px;border-radius:8px;background:var(--cream);border:none;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:0.95rem; }
+  .icon-btn:hover { background:var(--ink);color:white; }
+
+  /* Toast */
+  /* TIMER */
+  .timer-wrap { display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 18px;margin-bottom:16px; }
+  .timer-display { font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--gold);
+    min-width:72px;text-align:center;transition:color 0.3s; }
+  .timer-display.warning { color:#f97316; }
+  .timer-display.danger  { color:var(--accent3);animation:timerPulse 0.5s ease infinite; }
+  @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .timer-btn { background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+    color:white;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:0.85rem;transition:all 0.2s; }
+  .timer-btn:hover { background:rgba(255,255,255,0.2); }
+  .timer-select { background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+    color:white;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:0.85rem;
+    font-family:'DM Sans',sans-serif; }
+  .timer-select option { background:#1a1929;color:white; }
+
+  /* TIMER OVERLAY (fin de session) */
+  .timer-ended-overlay { position:fixed;inset:0;background:rgba(15,14,23,0.92);z-index:400;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;
+    opacity:0;pointer-events:none;transition:opacity 0.4s; }
+  .timer-ended-overlay.show { opacity:1;pointer-events:all; }
+  .timer-ended-title { font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;color:white;text-align:center; }
+  .timer-ended-sub { color:rgba(255,255,255,0.6);font-size:1.1rem; }
+
+  /* EXPORT / IMPORT BUTTONS */
+  .btn-export { display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);
+    border:1.5px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.85);padding:9px 18px;
+    border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.88rem;
+    transition:all 0.2s; }
+  .btn-export:hover { background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);color:white; }
+  .export-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:12px; }
+
+  /* IMPORT ZONE */
+  .import-zone { border:2px dashed var(--border);border-radius:14px;padding:32px;text-align:center;
+    cursor:pointer;transition:all 0.2s;background:white;margin-bottom:20px; }
+  .import-zone:hover,.import-zone.drag { border-color:var(--accent);background:rgba(255,107,53,0.04); }
+  .import-zone-icon { font-size:2.5rem;margin-bottom:10px; }
+  .import-zone-text { font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:4px; }
+  .import-zone-sub { font-size:0.82rem;color:var(--mid); }
+
+  /* TIMER OPTION IN EDITOR */
+  .timer-option { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+  .timer-input { width:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
+    font-family:'DM Sans',sans-serif;font-size:0.9rem;text-align:center;outline:none; }
+  .timer-input:focus { border-color:var(--ink); }
+
+  .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:var(--ink);color:white;padding:12px 24px;border-radius:100px;font-size:0.9rem;
+    font-weight:500;z-index:9999;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);pointer-events:none; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- CONFIG BANNER -->
+<div id="configBanner">
+  <div>
+    <strong>⚙ Configuration Supabase requise</strong>
+    <div class="config-form">
+      <input class="config-input" id="cfgUrl" placeholder="https://xxxxx.supabase.co" type="url">
+      <input class="config-input" id="cfgKey" placeholder="clé anon publique (eyJ…)" type="text">
+      <button class="config-btn" onclick="initSupabaseFromForm()">Connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="home-bg"></div><div class="home-grid"></div>
+  <div class="home-inner">
+    <div class="home-logo"><span class="logo-dot"></span>Interactio</div>
+    <div class="home-tag">✦ Interactions en temps réel</div>
+    <h1 class="home-title">Animez.<br><span>Engagez.</span><br>Évaluez.</h1>
+    <p class="home-subtitle">Sondages, remue-méninges et quiz interactifs. Aucune inscription requise pour participer.</p>
+    <div class="home-actions">
+      <button class="home-btn primary" onclick="showScreen('participate')">
+        <div class="btn-icon">🎯</div>
+        <div class="btn-label">Participer</div>
+        <div class="btn-desc">Rejoindre avec le code de l'animateur</div>
+      </button>
+      <button class="home-btn" onclick="openPinModal('create')">
+        <div class="btn-icon">✦</div>
+        <div class="btn-label">Créer</div>
+        <div class="btn-desc">Créer une nouvelle interaction</div>
+      </button>
+      <button class="home-btn" onclick="openPinModal('dashboard')">
+        <div class="btn-icon">📋</div>
+        <div class="btn-label">Mes interactions</div>
+        <div class="btn-desc">Accéder à vos activités et résultats</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PARTICIPATE -->
+<div id="participate" class="screen">
+  <nav class="nav-bar">
+    <div class="nav-logo" onclick="showScreen('home')"><span class="logo-dot"></span>Interactio</div>
+    <button class="back-btn" onclick="showScreen('home')">← Retour</button>
+  </nav>
+  <div class="content-wrap">
+    <div class="screen-eyebrow">Rejoindre</div>
+    <h2 class="screen-title">Entrez le code</h2>
+    <p class="screen-sub">Saisissez le code à 6 caractères fourni par votre animateur.</p>
+    <div class="code-input-wrap">
+      <input class="code-input" id="joinCode" type="text" maxlength="6" placeholder="ABC123" oninput="this.value=this.value.toUpperCase()">
+      <button class="btn-primary" onclick="joinSession()">Rejoindre →</button>
+    </div>
+    <p id="joinError" class="error-msg" style="display:none"></p>
+    <p style="font-size:0.82rem;color:var(--mid);margin-top:12px">🔒 Participation 100% anonyme — aucune donnée personnelle requise.</p>
+  </div>
+</div>
+
+<!-- CREATE -->
+<div id="create" class="screen">
+  <nav class="nav-bar">
+    <div class="nav-logo" onclick="showScreen('home')"><span class="logo-dot"></span>Interactio</div>
+    <button class="back-btn" onclick="showScreen('home')">← Retour</button>
+  </nav>
+  <div class="content-wrap">
+    <div class="screen-eyebrow">Nouvelle interaction</div>
+    <h2 class="screen-title" style="margin-bottom:8px">Choisissez un type</h2>
+    <p class="screen-sub" style="margin-bottom:32px">Sélectionnez le type d'interaction à créer.</p>
+    <div class="type-grid">
+      <div class="type-card" style="--card-color:#ff6b35" onclick="selectType('poll',this)">
+        <div class="type-icon" style="background:#ff6b35">📊</div>
+        <div class="type-name">Sondage</div>
+        <div class="type-desc">Collectez des avis, opinions et informations.</div>
+      </div>
+      <div class="type-card" style="--card-color:#8338ec" onclick="selectType('brainstorm',this)">
+        <div class="type-icon" style="background:#8338ec">💡</div>
+        <div class="type-name">Remue-méninges</div>
+        <div class="type-desc">Stimulez la créativité et collectez des idées.</div>
+      </div>
+      <div class="type-card" style="--card-color:#2ec4b6" onclick="selectType('quiz',this)">
+        <div class="type-icon" style="background:#2ec4b6">🎓</div>
+        <div class="type-name">Questionnaire</div>
+        <div class="type-desc">Évaluez les connaissances de façon formative ou sommative.</div>
+      </div>
+      <div class="type-card" style="--card-color:#e63946" onclick="selectType('wordcloud',this)">
+        <div class="type-icon" style="background:#e63946">☁</div>
+        <div class="type-name">Nuage de mots</div>
+        <div class="type-desc">Visualisez les mots-clés partagés par vos participants.</div>
+      </div>
+    </div>
+    <div id="editorSection" class="editor-section">
+      <div class="editor-card">
+        <label class="field-label">Titre de l'interaction</label>
+        <input class="field-input lg" id="actTitle" type="text" placeholder="Donnez un titre à votre activité…">
+      </div>
+      <div id="pollEditor" class="editor-card" style="display:none">
+        <label class="field-label">Question</label>
+        <input class="field-input" id="pollQuestion" type="text" placeholder="Votre question…" style="margin-bottom:20px">
+        <label class="field-label">Options de réponse</label>
+        <div id="pollOptions">
+          <div class="answer-row"><input class="field-input" type="text" placeholder="Option A" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button></div>
+          <div class="answer-row"><input class="field-input" type="text" placeholder="Option B" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button></div>
+        </div>
+        <button class="add-btn" onclick="addPollOption()">+ Ajouter une option</button>
+      </div>
+      <div id="brainstormEditor" class="editor-card" style="display:none">
+        <label class="field-label">Thème / Consigne</label>
+        <input class="field-input" id="brainstormPrompt" type="text" placeholder="Ex : Quels défis pour l'éducation de demain ?">
+        <p style="font-size:0.82rem;color:var(--mid);margin-top:10px">Les participants soumettent librement leurs idées, affichées en temps réel.</p>
+      </div>
+      <div id="quizEditor" class="editor-card" style="display:none">
+        <label class="field-label">Questions <span style="font-weight:400;text-transform:none;letter-spacing:0">(cochez la ou les bonne(s) réponse(s))</span></label>
+        <div id="quizQuestions">
+          <div class="q-block">
+            <div style="display:flex;gap:10px;margin-bottom:12px">
+              <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;padding:6px 10px;background:var(--cream);border-radius:8px;flex-shrink:0">Q1</span>
+              <input class="field-input" type="text" placeholder="Énoncé…" style="flex:1">
+            </div>
+            <div class="answer-row"><input type="checkbox" class="correct-check"><input class="field-input" type="text" placeholder="Réponse A" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button></div>
+            <div class="answer-row"><input type="checkbox" class="correct-check"><input class="field-input" type="text" placeholder="Réponse B" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button></div>
+            <button class="add-btn" onclick="addQuizAnswer(this)" style="max-width:280px;margin-top:6px">+ Réponse</button>
+          </div>
+        </div>
+        <button class="add-btn" onclick="addQuizQuestion()">+ Ajouter une question</button>
+      </div>
+      <div id="wordcloudEditor" class="editor-card" style="display:none">
+        <label class="field-label">Question / Consigne</label>
+        <input class="field-input" id="wcPrompt" type="text" placeholder="Ex : En un mot, comment vous sentez-vous aujourd'hui ?">
+        <p style="font-size:0.82rem;color:var(--mid);margin-top:10px">Les participants soumettent 1 à 3 mots séparés par des virgules.</p>
+      </div>
+      <div class="editor-card" style="background:var(--cream)">
+        <label class="field-label">Options</label>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem">
+            <input type="checkbox" id="optAnon" checked style="accent-color:var(--accent);width:16px;height:16px"> Anonymat garanti
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem">
+            <input type="checkbox" id="optMulti" style="accent-color:var(--accent);width:16px;height:16px"> Réponses multiples
+          </label>
+        </div>
+        <div class="timer-option">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem">
+            <input type="checkbox" id="optTimer" style="accent-color:var(--accent);width:16px;height:16px" onchange="toggleTimerInput()"> Minuteur
+          </label>
+          <div id="timerInputWrap" style="display:none;align-items:center;gap:8px">
+            <input type="number" class="timer-input" id="timerMinutes" min="1" max="60" value="5" placeholder="5">
+            <span style="font-size:.85rem;color:var(--mid)">minutes</span>
+          </div>
+        </div>
+      </div>
+      <div class="submit-row">
+        <button class="btn-outline" onclick="showScreen('home')">Annuler</button>
+        <button class="btn-save" id="saveBtn" onclick="saveInteraction()">Créer l'interaction →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION -->
+<div id="session" class="screen">
+  <div class="session-top">
+    <div class="session-logo">⚡ Interactio</div>
+    <div class="session-code-badge">
+      <div>
+        <div class="session-code-label">Code d'accès</div>
+        <div class="session-code-value" id="sessionCodeDisplay">-</div>
+      </div>
+      <button class="copy-code" onclick="copyCode()">📋 Copier</button>
+    </div>
+    <button class="btn-session-outline" onclick="showScreen('home')">← Accueil</button>
+  </div>
+  <div class="session-body">
+    <div class="session-qr-area">
+      <div class="qr-box">
+        <img class="qr-img" id="qrImg" src="" alt="QR Code">
+        <div class="qr-code-text" id="qrCodeText"></div>
+      </div>
+      <div class="session-info">
+        <div class="session-type-badge" id="sessionTypeBadge"></div>
+        <div class="session-title-big" id="sessionTitle">-</div>
+        <div class="session-url" id="sessionUrl"></div>
+      </div>
+    </div>
+    <div class="participants-bar">
+      <div>
+        <div class="part-count" id="partCount">0</div>
+        <div class="part-label">réponse(s) pour cette session</div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="live-dot"></div>
+      <div class="live-text">En attente…</div>
+    </div>
+    <div class="session-controls">
+      <button class="btn-launch" id="launchBtn" onclick="launchLive()">▶ Lancer la session</button>
+      <button class="btn-session-outline" onclick="showScreen('dashboard')">📋 Mes interactions</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE -->
+<div id="live" class="screen">
+  <div class="live-header">
+    <div class="session-logo">⚡ Interactio</div>
+    <div class="live-badge"><div class="live-dot"></div> Session en cours</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="session-code-badge" style="padding:6px 14px">
+        <div style="font-size:.7rem;color:rgba(255,255,255,0.4)">CODE</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:var(--gold)" id="liveCodeBadge">-</div>
+      </div>
+      <button class="btn-session-outline" style="font-size:.85rem;padding:8px 16px" onclick="endSession()">⏹ Terminer</button>
+    </div>
+  </div>
+  <div class="live-body">
+    <div class="live-question" id="liveQuestion">-</div>
+    <div id="timerWrap" style="display:none">
+      <div class="timer-wrap">
+        <div class="timer-display" id="timerDisplay">05:00</div>
+        <div style="flex:1"></div>
+        <button class="timer-btn" id="timerPlayPause" onclick="timerToggle()">⏸ Pause</button>
+        <button class="timer-btn" onclick="timerReset()">↺ Remettre</button>
+      </div>
+    </div>
+    <div id="liveResults"></div>
+    <div class="participants-bar" style="margin-top:20px">
+      <div>
+        <div class="part-count" id="livePartCount">0</div>
+        <div class="part-label">réponses reçues</div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="live-dot"></div>
+      <div class="live-text" id="liveStatus">En cours…</div>
+    </div>
+    <div class="export-row" id="liveExportRow" style="display:none">
+      <button class="btn-export" onclick="exportXLSX()">📊 Exporter Excel</button>
+      <button class="btn-export" onclick="exportPDF()">📄 Exporter PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY (participant) -->
+<div id="activity" class="screen">
+  <div class="activity-header">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem">⚡ Interactio</div>
+    <div style="font-size:.85rem;color:rgba(255,255,255,0.5)">🔒 Anonyme</div>
+  </div>
+  <div class="activity-body">
+    <div id="activityContent">
+      <div class="waiting-wrap"><div class="spinner"></div><p style="color:var(--mid)">Connexion…</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="screen">
+  <nav class="nav-bar">
+    <div class="nav-logo" onclick="showScreen('home')"><span class="logo-dot"></span>Interactio</div>
+    <button class="back-btn" onclick="showScreen('home')">← Accueil</button>
+  </nav>
+  <div class="dash-body">
+    <div class="dash-header-row">
+      <div>
+        <div class="screen-eyebrow">Tableau de bord</div>
+        <div class="dash-title">Mes interactions</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="animator-badge">
+          <span class="animator-badge-icon">🔑</span>
+          <div>
+            <div class="animator-badge-label">Animateur</div>
+            <div class="animator-badge-id" id="animatorIdDisplay">-</div>
+          </div>
+        </div>
+        <button class="btn-save" onclick="openPinModal('create')">+ Créer</button>
+        <button class="btn-outline" onclick="triggerImport()" title="Importer des interactions JSON">📥 Importer</button>
+        <button class="btn-outline" onclick="exportInteractions()" title="Exporter toutes mes interactions">📤 Exporter</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(event)">
+      </div>
+    </div>
+    <div class="interaction-list" id="dashList">
+      <div class="waiting-wrap" style="padding:40px 0"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TIMER ENDED OVERLAY -->
+<div class="timer-ended-overlay" id="timerEndedOverlay">
+  <div style="font-size:4rem">⏱</div>
+  <div class="timer-ended-title">Temps écoulé !</div>
+  <div class="timer-ended-sub">La session est toujours ouverte.</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+    <button class="btn-save" onclick="document.getElementById('timerEndedOverlay').classList.remove('show')">Continuer la session</button>
+    <button class="btn-outline" onclick="endSessionFromTimer()">Terminer la session</button>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal-box">
+    <div id="pinModalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// CONFIG SUPABASE
+// ============================================
+const SUPABASE_URL = 'https://VOTRE-PROJET.supabase.co';
+const SUPABASE_KEY = 'VOTRE-CLE-ANON-PUBLIQUE';
+
+let sb = null;
+
+function initSupabase(url, key) {
+  if (!url || !key || url.includes('VOTRE-PROJET')) return false;
+  try {
+    sb = supabase.createClient(url, key);
+    const banner = document.getElementById('configBanner');
+    if (banner) banner.style.display = 'none';
+    return true;
+  } catch(e) { console.error('Supabase:', e); return false; }
+}
+
+function initSupabaseFromForm() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const key = document.getElementById('cfgKey').value.trim();
+  if (!url || !key) { showToast('⚠ Entrez l\'URL et la clé'); return; }
+  if (initSupabase(url, key)) {
+    localStorage.setItem('sb_url', url);
+    localStorage.setItem('sb_key', key);
+    document.getElementById('configBanner').style.display = 'none';
+    showToast('✓ Connecté à Supabase !');
+  } else {
+    showToast('❌ URL ou clé invalide');
+  }
+}
+
+// Auto-init après chargement du DOM
+document.addEventListener('DOMContentLoaded', function() {
+  if (initSupabase(SUPABASE_URL, SUPABASE_KEY)) return;
+  const url = localStorage.getItem('sb_url');
+  const key = localStorage.getItem('sb_key');
+  if (url && key) {
+    document.getElementById('cfgUrl').value = url;
+    document.getElementById('cfgKey').value = key;
+    if (!initSupabase(url, key)) {
+      localStorage.removeItem('sb_url');
+      localStorage.removeItem('sb_key');
+    }
+  }
+});
+
+// ============================================
+// PIN — HACHAGE SHA-256
+// ============================================
+// Hachage SHA-256 — fonctionne en HTTPS et en file://
+async function sha256(str) {
+  // Priorité : API native (HTTPS / localhost)
+  if (window.crypto && window.crypto.subtle) {
+    const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  // Fallback : implémentation pure JS (file://)
+  return sha256Fallback(str);
+}
+
+function sha256Fallback(str) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let result = '';
+  const words = [];
+  const asciiBitLength = str.length * 8;
+  let hash = [], k = [], primeCounter = 0;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (let i = candidate * candidate; i < 313; i += candidate) isComposite[i] = true;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1/3) * maxWord) | 0;
+    }
+  }
+  str += '\x80';
+  while (str.length % 64 - 56) str += '\x00';
+  for (let i = 0; i < str.length; i++) {
+    const j = str.charCodeAt(i);
+    if (j >> 8) return ''; // non-ASCII — ne devrait pas arriver
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength | 0);
+  for (let j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash.slice(0);
+    for (let i = 0; i < 64; i++) {
+      const i2 = i + j - 16;
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ (~e & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? (words[i2] || 0) : (
+            (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+          + (w[i - 7] | 0)
+          + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          + (w[i - 16] | 0)
+        ) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0, a, hash[1], hash[2], (hash[3] + temp1) | 0, e, hash[4], hash[5]];
+    }
+    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (let i = 0; i < 8; i++) {
+    for (let j = 3; j + 1; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+// ============================================
+// STATE
+// ============================================
+let currentAnimatorId = localStorage.getItem('animator_id') || null;
+let currentInteraction = null;
+let currentSessionId = null;
+let realtimeSub = null;
+let pinModalTarget = null; // 'create' | 'dashboard'
+let pinBuffer = '';
+let pinMode = 'enter'; // 'enter' | 'create' | 'confirm'
+let pinFirstEntry = '';
+let pinProcessing = false;
+let pinSavedHint = null;
+let pinIdentifier = ''; // identifiant choisi par l'animateur
+
+const TYPE_META = {
+  poll:       { label:'Sondage',        icon:'📊', color:'#ff6b35' },
+  brainstorm: { label:'Remue-méninges', icon:'💡', color:'#8338ec' },
+  quiz:       { label:'Questionnaire',  icon:'🎓', color:'#2ec4b6' },
+  wordcloud:  { label:'Nuage de mots',  icon:'☁',  color:'#e63946' },
+};
+const BAR_COLORS = ['#ff6b35','#2ec4b6','#8338ec','#e63946','#ffd166','#06d6a0','#118ab2'];
+
+// ============================================
+// NAVIGATION
+// ============================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if (id === 'dashboard') loadDashboard();
+}
+
+// ============================================
+// PIN MODAL — machine à états simple
+// États : 'create' → 'confirm' → done
+//         'enter'  → done
+// ============================================
+function openPinModal(target) {
+  pinModalTarget = target;
+  resetPinState();
+  pinIdentifier = localStorage.getItem('animator_identifier') || '';
+  const hasAnimatorId = !!localStorage.getItem('animator_id');
+  if (pinIdentifier && hasAnimatorId) {
+    pinMode = 'enter';
+  } else {
+    localStorage.removeItem('animator_id');
+    localStorage.removeItem('animator_pin_hash');
+    localStorage.removeItem('animator_identifier');
+    currentAnimatorId = null;
+    pinIdentifier = '';
+    pinMode = 'ident'; // nouvelle étape : saisie de l'identifiant
+  }
+  renderPinUI();
+  document.getElementById('pinModal').classList.add('open');
+}
+
+function resetPinState() {
+  pinBuffer = '';
+  pinFirstEntry = '';
+  pinSavedHint = null;
+  pinProcessing = false;
+  // Ne pas réinitialiser pinIdentifier ici — il persiste entre create et confirm
+}
+
+function closePinModal() {
+  document.getElementById('pinModal').classList.remove('open');
+  resetPinState();
+}
+
+function renderPinUI() {
+  const el = document.getElementById('pinModalContent');
+
+  // Étape identifiant : formulaire texte simple
+  if (pinMode === 'ident') {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div class="modal-title">Votre identifiant</div>
+        <button id="pinClose" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--mid)">✕</button>
+      </div>
+      <div class="modal-sub">Choisissez un identifiant unique (prénom, initiales, pseudonyme…). Combiné à votre PIN, il garantit un espace privé.</div>
+      <div style="margin:20px 0">
+        <label class="field-label">Identifiant</label>
+        <input id="identInput" class="field-input" type="text" placeholder="Ex : marie.dupont, MDU, prof42…"
+          maxlength="32" autocomplete="off" style="font-size:1.1rem;padding:14px">
+        <p id="identError" style="color:var(--accent3);font-size:0.82rem;margin-top:6px;display:none"></p>
+      </div>
+      <button id="identNext" class="btn-save" style="width:100%">Continuer →</button>
+      <div class="modal-hint" style="margin-top:16px">Déjà un espace ? <a id="identLogin">Se connecter</a></div>`;
+    document.getElementById('pinClose').addEventListener('click', closePinModal);
+    document.getElementById('identNext').addEventListener('click', submitIdentifier);
+    document.getElementById('identInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitIdentifier(); });
+    document.getElementById('identLogin').addEventListener('click', () => { pinMode = 'enter_ident'; renderPinUI(); });
+    setTimeout(() => document.getElementById('identInput').focus(), 50);
+    return;
+  }
+
+  // Étape identifiant pour connexion (entrer son identifiant existant)
+  if (pinMode === 'enter_ident') {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div class="modal-title">Connexion</div>
+        <button id="pinClose" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--mid)">✕</button>
+      </div>
+      <div class="modal-sub">Entrez votre identifiant puis votre PIN.</div>
+      <div style="margin:20px 0">
+        <label class="field-label">Identifiant</label>
+        <input id="identInput" class="field-input" type="text" placeholder="Votre identifiant…"
+          maxlength="32" autocomplete="off" style="font-size:1.1rem;padding:14px">
+      </div>
+      <button id="identNext" class="btn-save" style="width:100%">Continuer →</button>`;
+    document.getElementById('pinClose').addEventListener('click', closePinModal);
+    document.getElementById('identNext').addEventListener('click', submitIdentifierLogin);
+    document.getElementById('identInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitIdentifierLogin(); });
+    setTimeout(() => document.getElementById('identInput').focus(), 50);
+    return;
+  }
+
+  const cfg = {
+    enter:   { title: 'Votre PIN',         sub: `Identifiant : <strong>${pinIdentifier}</strong>` },
+    create:  { title: 'Créer votre PIN',   sub: 'Choisissez un code PIN à 6 chiffres.' },
+    confirm: { title: 'Confirmer le PIN',  sub: 'Ressaisissez votre PIN pour confirmer.' },
+  }[pinMode];
+
+  const attempts = pinMode === 'enter'
+    ? `<div class="attempts-bar" id="attemptsBar">${Array(5).fill('<div class="attempt-dot"></div>').join('')}</div>` : '';
+  const forgotLink = pinMode === 'enter'
+    ? `<div class="modal-hint">Pas vous ? <a id="notMe">Changer d'identifiant</a></div>` : '';
+  const dots = Array(6).fill('<div class="pin-dot"></div>').join('');
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+      <div class="modal-title">${cfg.title}</div>
+      <button id="pinClose" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--mid)">✕</button>
+    </div>
+    <div class="modal-sub">${cfg.sub}</div>
+    <div class="pin-display" id="pinDisplay">${dots}</div>
+    ${attempts}
+    <div class="pin-keypad" id="pinKeypad">
+      <button class="pin-key" data-val="1">1</button>
+      <button class="pin-key" data-val="2">2</button>
+      <button class="pin-key" data-val="3">3</button>
+      <button class="pin-key" data-val="4">4</button>
+      <button class="pin-key" data-val="5">5</button>
+      <button class="pin-key" data-val="6">6</button>
+      <button class="pin-key" data-val="7">7</button>
+      <button class="pin-key" data-val="8">8</button>
+      <button class="pin-key" data-val="9">9</button>
+      <button class="pin-key del" data-val="del">⌫</button>
+      <button class="pin-key" data-val="0">0</button>
+      <button class="pin-key del" data-val="clear">✕</button>
+    </div>
+    ${forgotLink}`;
+
+  document.getElementById('pinClose').addEventListener('click', closePinModal);
+  document.getElementById('pinKeypad').querySelectorAll('button[data-val]').forEach(btn => {
+    btn.addEventListener('click', () => pinPress(btn.dataset.val));
+  });
+  if (pinMode === 'enter') {
+    const notMe = document.getElementById('notMe');
+    if (notMe) notMe.addEventListener('click', forgotPin);
+  }
+}
+
+function submitIdentifier() {
+  const val = document.getElementById('identInput').value.trim().toLowerCase();
+  const errEl = document.getElementById('identError');
+  if (!val || val.length < 2) {
+    errEl.textContent = 'Minimum 2 caractères.';
+    errEl.style.display = 'block';
+    return;
+  }
+  pinIdentifier = val;
+  pinBuffer = '';
+  pinMode = 'create';
+  renderPinUI();
+}
+
+function submitIdentifierLogin() {
+  const val = document.getElementById('identInput').value.trim().toLowerCase();
+  if (!val || val.length < 2) return;
+  pinIdentifier = val;
+  pinBuffer = '';
+  pinMode = 'enter';
+  renderPinUI();
+}
+
+function updatePinDisplay() {
+  document.querySelectorAll('#pinDisplay .pin-dot').forEach((d, i) => {
+    d.textContent = i < pinBuffer.length ? '•' : '';
+    d.classList.toggle('filled', i < pinBuffer.length);
+  });
+}
+
+function pinPress(val) {
+  if (pinProcessing) return;
+  if (val === 'del')        pinBuffer = pinBuffer.slice(0, -1);
+  else if (val === 'clear') pinBuffer = '';
+  else if (pinBuffer.length < 6) pinBuffer += val;
+  updatePinDisplay();
+  if (pinBuffer.length === 6) {
+    pinProcessing = true;
+    const captured = pinBuffer; // capture avant tout reset
+    setTimeout(() => onPinComplete(captured), 180);
+  }
+}
+
+async function onPinComplete(pin) {
+  try {
+    if (pinMode === 'enter') {
+      await verifyPin(pin);
+    } else if (pinMode === 'create') {
+      // Sauvegarder le 1er PIN et passer à la confirmation
+      pinFirstEntry = pin;
+      pinSavedHint = document.getElementById('pinHintInput')?.value?.trim() || null;
+      pinBuffer = '';
+      pinMode = 'confirm';
+      renderPinUI();
+    } else if (pinMode === 'confirm') {
+      if (pin === pinFirstEntry) {
+        await createAnimator(pin);
+      } else {
+        pinBuffer = '';
+        pinFirstEntry = '';
+        pinMode = 'create';
+        renderPinUI();
+        showToast('⚠ Les PIN ne correspondent pas — recommencez');
+      }
+    }
+  } finally {
+    pinProcessing = false;
+  }
+}
+
+async function verifyPin(pin) {
+  const hash = await sha256(pinIdentifier.toLowerCase() + ':' + pin);
+
+  if (!sb) {
+    // Mode local : simple vérification via localStorage
+    const storedHash = localStorage.getItem('animator_pin_hash');
+    if (!storedHash) { await createAnimatorLocal(pin, hash); return; }
+    if (hash === storedHash) {
+      closePinModal();
+      showScreen(pinModalTarget);
+    } else {
+      showPinError();
+    }
+    return;
+  }
+
+  // Vérification en base
+  const { data, error } = await sb.from('animators').select('id, failed_attempts, locked_until, pin_hint').eq('pin_hash', hash).single();
+  if (error || !data) { showPinError(); return; }
+
+  // Vérifier verrouillage
+  if (data.locked_until && new Date(data.locked_until) > new Date()) {
+    const mins = Math.ceil((new Date(data.locked_until) - new Date()) / 60000);
+    showToast(`🔒 Compte verrouillé — réessayez dans ${mins} min`);
+    pinBuffer = '';
+    return;
+  }
+
+  // Réinitialiser les tentatives
+  await sb.from('animators').update({ failed_attempts: 0, locked_until: null, last_seen_at: new Date().toISOString() }).eq('id', data.id);
+  currentAnimatorId = data.id;
+  localStorage.setItem('animator_id', data.id);
+  closePinModal();
+  showScreen(pinModalTarget);
+}
+
+async function showPinError() {
+  pinBuffer = '';
+  // Animer les points en rouge
+  document.querySelectorAll('#pinDisplay .pin-dot').forEach(d => {
+    d.classList.remove('filled'); d.classList.add('error'); d.textContent = '✕';
+    setTimeout(() => { d.classList.remove('error'); d.textContent = ''; }, 600);
+  });
+
+  if (sb && currentAnimatorId) {
+    // Incrémenter les tentatives (si on connaît l'animator_id d'une session précédente)
+  }
+
+  // Mettre à jour la barre de tentatives visuellement
+  const bar = document.getElementById('attemptsBar');
+  if (bar) {
+    const used = bar.querySelectorAll('.attempt-dot.used').length + 1;
+    bar.querySelectorAll('.attempt-dot').forEach((d, i) => d.classList.toggle('used', i < used));
+    if (used >= 5 && sb) {
+      const hash = await sha256(pinBuffer || '0');
+      await sb.from('animators').update({ failed_attempts: 5, locked_until: new Date(Date.now() + 5*60*1000).toISOString() }).eq('pin_hash', hash);
+      showToast('🔒 Trop de tentatives — verrouillage 5 minutes');
+    }
+  }
+  showToast('❌ PIN incorrect');
+}
+
+async function createAnimator(pin) {
+  // Hacher identifiant:pin — garantit l'unicité même avec le même PIN
+  const hash = await sha256(pinIdentifier.toLowerCase() + ':' + pin);
+  const hint = pinSavedHint || null;
+
+  if (!sb) {
+    createAnimatorLocal(pin, hash);
+    return;
+  }
+
+  // Essayer d'insérer ; si conflit (PIN déjà pris), récupérer l'entrée existante
+  let animatorId = null;
+  const { data, error } = await sb.from('animators').insert({ pin_hash: hash, pin_hint: hint }).select('id').single();
+  if (error) {
+    if (error.code === '23505' || error.status === 409) {
+      // Ce PIN existe déjà — c'est le même animateur qui se reconnecte
+      const { data: existing, error: fetchError } = await sb.from('animators')
+        .select('id').eq('pin_hash', hash).single();
+      if (fetchError || !existing) { showToast('❌ Erreur de récupération : ' + (fetchError?.message || '')); return; }
+      animatorId = existing.id;
+      // Mettre à jour last_seen_at
+      await sb.from('animators').update({ last_seen_at: new Date().toISOString() }).eq('id', animatorId);
+    } else {
+      showToast('❌ ' + error.message);
+      return;
+    }
+  } else {
+    animatorId = data.id;
+  }
+  currentAnimatorId = animatorId;
+  localStorage.setItem('animator_id', animatorId);
+  localStorage.setItem('animator_identifier', pinIdentifier);
+  closePinModal();
+  showToast('✓ Espace prêt pour ' + pinIdentifier + ' !');
+  showScreen(pinModalTarget);
+}
+
+function createAnimatorLocal(pin, hash) {
+  localStorage.setItem('animator_pin_hash', hash);
+  localStorage.setItem('animator_identifier', pinIdentifier);
+  currentAnimatorId = 'local_' + Date.now();
+  localStorage.setItem('animator_id', currentAnimatorId);
+  closePinModal();
+  showToast('✓ Espace créé pour ' + pinIdentifier + ' !');
+  showScreen(pinModalTarget);
+}
+
+function forgotPin() {
+  if (!confirm('Créer un nouvel espace animateur ? Vous ne pourrez plus accéder à vos anciennes interactions avec l\'ancien PIN.')) return;
+  currentAnimatorId = null;
+  pinIdentifier = '';
+  localStorage.removeItem('animator_id');
+  localStorage.removeItem('animator_pin_hash');
+  localStorage.removeItem('animator_identifier');
+  pinBuffer = '';
+  pinMode = 'ident';
+  renderPinUI();
+}
+
+// Clavier physique pour le PIN
+document.addEventListener('keydown', e => {
+  const modal = document.getElementById('pinModal');
+  if (!modal.classList.contains('open')) return;
+  if (e.key >= '0' && e.key <= '9') pinPress(e.key);
+  else if (e.key === 'Backspace') pinPress('del');
+  else if (e.key === 'Escape') closePinModal();
+});
+
+// ============================================
+// CREATE INTERACTION
+// ============================================
+let currentType = null;
+let quizQCount = 1;
+
+function selectType(type, card) {
+  currentType = type;
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('editorSection').classList.add('visible');
+  ['pollEditor','brainstormEditor','quizEditor','wordcloudEditor'].forEach(e => document.getElementById(e).style.display = 'none');
+  document.getElementById({ poll:'pollEditor', brainstorm:'brainstormEditor', quiz:'quizEditor', wordcloud:'wordcloudEditor' }[type]).style.display = 'block';
+  setTimeout(() => document.getElementById('editorSection').scrollIntoView({behavior:'smooth',block:'start'}), 50);
+}
+
+function addPollOption() {
+  const c = document.getElementById('pollOptions'), n = c.children.length;
+  const row = document.createElement('div'); row.className = 'answer-row';
+  row.innerHTML = `<input class="field-input" type="text" placeholder="Option ${'ABCDEFGHIJKLMNOP'[n]}" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(row);
+}
+
+function addQuizAnswer(btn) {
+  const row = document.createElement('div'); row.className = 'answer-row';
+  row.innerHTML = `<input type="checkbox" class="correct-check"><input class="field-input" type="text" placeholder="Réponse…" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  btn.parentElement.insertBefore(row, btn);
+}
+
+function addQuizQuestion() {
+  quizQCount++;
+  const c = document.getElementById('quizQuestions');
+  const div = document.createElement('div'); div.className = 'q-block';
+  div.innerHTML = `<div style="display:flex;gap:10px;margin-bottom:12px">
+    <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;padding:6px 10px;background:var(--cream);border-radius:8px;flex-shrink:0">Q${quizQCount}</span>
+    <input class="field-input" type="text" placeholder="Énoncé…" style="flex:1"></div>
+    <div class="answer-row"><input type="checkbox" class="correct-check"><input class="field-input" type="text" placeholder="Réponse A" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button></div>
+    <div class="answer-row"><input type="checkbox" class="correct-check"><input class="field-input" type="text" placeholder="Réponse B" style="flex:1"><button class="del-btn" onclick="this.parentElement.remove()">✕</button></div>
+    <button class="add-btn" onclick="addQuizAnswer(this)" style="max-width:280px;margin-top:6px">+ Réponse</button>`;
+  c.appendChild(div);
+}
+
+function buildContent() {
+  if (currentType === 'poll') {
+    const q = document.getElementById('pollQuestion').value.trim();
+    const opts = [...document.querySelectorAll('#pollOptions .field-input')].map(i => i.value.trim()).filter(Boolean);
+    return opts.length >= 2 ? { question: q, options: opts } : null;
+  }
+  if (currentType === 'brainstorm') return { prompt: document.getElementById('brainstormPrompt').value.trim() };
+  if (currentType === 'quiz') {
+    const blocks = document.querySelectorAll('#quizQuestions .q-block');
+    const questions = [...blocks].map(b => {
+      const text = b.querySelector('input[type="text"]').value.trim();
+      const rows = b.querySelectorAll('.answer-row');
+      const answers = [], correct = [];
+      rows.forEach((r, i) => { const t = r.querySelector('input[type="text"]')?.value.trim(); const c = r.querySelector('input[type="checkbox"]')?.checked; if(t){answers.push(t);if(c)correct.push(i);} });
+      return { text, answers, correct };
+    });
+    return { questions };
+  }
+  if (currentType === 'wordcloud') return { prompt: document.getElementById('wcPrompt').value.trim() };
+}
+
+// ============================================
+// MINUTEUR
+// ============================================
+let timerInterval = null;
+let timerRemaining = 0;
+let timerTotal = 0;
+let timerRunning = false;
+
+function toggleTimerInput() {
+  const wrap = document.getElementById('timerInputWrap');
+  const checked = document.getElementById('optTimer').checked;
+  wrap.style.display = checked ? 'flex' : 'none';
+}
+
+function setupTimer(minutes) {
+  timerTotal = minutes * 60;
+  timerRemaining = timerTotal;
+  timerRunning = true;
+  renderTimerDisplay();
+  document.getElementById('timerWrap').style.display = 'block';
+  document.getElementById('timerPlayPause').textContent = '⏸ Pause';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(timerTick, 1000);
+}
+
+function timerTick() {
+  if (!timerRunning) return;
+  timerRemaining--;
+  renderTimerDisplay();
+  if (timerRemaining <= 0) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    document.getElementById('timerEndedOverlay').classList.add('show');
+  }
+}
+
+function renderTimerDisplay() {
+  const el = document.getElementById('timerDisplay');
+  if (!el) return;
+  const m = Math.floor(timerRemaining / 60);
+  const s = timerRemaining % 60;
+  el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  el.className = 'timer-display';
+  if (timerRemaining <= 30) el.classList.add('danger');
+  else if (timerRemaining <= 60) el.classList.add('warning');
+}
+
+function timerToggle() {
+  timerRunning = !timerRunning;
+  document.getElementById('timerPlayPause').textContent = timerRunning ? '⏸ Pause' : '▶ Reprendre';
+}
+
+function timerReset() {
+  timerRemaining = timerTotal;
+  timerRunning = true;
+  document.getElementById('timerPlayPause').textContent = '⏸ Pause';
+  renderTimerDisplay();
+}
+
+function endSessionFromTimer() {
+  document.getElementById('timerEndedOverlay').classList.remove('show');
+  endSession();
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerInterval = null;
+}
+
+// ============================================
+// UTILS GÉNÉRAUX
+// ============================================
+function genCode() {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => c[Math.floor(Math.random()*c.length)]).join('');
+}
+function genToken() { return Array.from({length:16}, () => Math.random().toString(36)[2]).join(''); }
+function getParticipantToken() {
+  let t = sessionStorage.getItem('participant_token');
+  if (!t) { t = genToken(); sessionStorage.setItem('participant_token', t); }
+  return t;
+}
+
+async function saveInteraction() {
+  const title = document.getElementById('actTitle').value.trim();
+  if (!title) { showToast('⚠ Donnez un titre'); return; }
+  if (!currentType) { showToast('⚠ Choisissez un type'); return; }
+  const content = buildContent();
+  if (!content) { showToast('⚠ Ajoutez au moins 2 options'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Création…';
+
+  const code = genCode();
+  const timerEnabled = document.getElementById('optTimer').checked;
+  const timerMins = timerEnabled ? parseInt(document.getElementById('timerMinutes').value) || 5 : 0;
+  const payload = { code, title, type: currentType, content,
+    options: { anonymous: document.getElementById('optAnon').checked, multiple: document.getElementById('optMulti').checked,
+               timer: timerMins },
+    animator_id: currentAnimatorId };
+
+  if (sb && !currentAnimatorId?.startsWith('local_')) {
+    let data = null, error = null, attempts = 0;
+    do {
+      if (attempts > 0) payload.code = genCode();
+      attempts++;
+      ({ data, error } = await sb.from('interactions').insert(payload).select().single());
+    } while (error && (error.code === '23505' || error.status === 409) && attempts < 5);
+    if (error) { showToast('❌ ' + error.message); btn.disabled = false; btn.textContent = 'Créer l\'interaction →'; return; }
+    currentInteraction = data;
+  } else {
+    const stored = JSON.parse(localStorage.getItem('interactio_local') || '[]');
+    payload.id = Date.now().toString(); payload.created_at = new Date().toISOString();
+    stored.push(payload); localStorage.setItem('interactio_local', JSON.stringify(stored));
+    currentInteraction = payload;
+  }
+
+  btn.disabled = false; btn.textContent = 'Créer l\'interaction →';
+  showToast('✓ Interaction créée !');
+  currentSessionId = null;
+  setupSessionScreen(currentInteraction);
+  showScreen('session');
+}
+
+// ============================================
+// SESSION
+// ============================================
+function setupSessionScreen(interaction) {
+  const meta = TYPE_META[interaction.type];
+  document.getElementById('sessionCodeDisplay').textContent = interaction.code;
+  document.getElementById('sessionTitle').textContent = interaction.title;
+  const origin = window.location.origin + window.location.pathname;
+  document.getElementById('sessionUrl').textContent = `${origin}?join=${interaction.code}`;
+  document.getElementById('sessionTypeBadge').textContent = `${meta.icon} ${meta.label}`;
+  document.getElementById('sessionTypeBadge').style.cssText = `background:${meta.color}22;color:${meta.color};display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;font-size:.8rem;font-weight:500;margin-bottom:16px`;
+  document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=${encodeURIComponent(origin+'?join='+interaction.code)}`;
+  document.getElementById('qrCodeText').textContent = interaction.code;
+  document.getElementById('partCount').textContent = '0';
+}
+
+async function launchLive() {
+  const btn = document.getElementById('launchBtn');
+  btn.disabled = true; btn.textContent = '⏳ Lancement…';
+  if (sb && !currentInteraction.id?.toString().match(/^\d{13}$/)) {
+    const { data, error } = await sb.from('sessions').insert({ interaction_id: currentInteraction.id, is_active: true }).select().single();
+    if (error) { showToast('❌ ' + error.message); btn.disabled = false; btn.textContent = '▶ Lancer la session'; return; }
+    currentSessionId = data.id;
+  } else {
+    currentSessionId = 'local_' + Date.now();
+  }
+  btn.disabled = false; btn.textContent = '▶ Lancer la session';
+  setupLiveScreen(currentInteraction);
+  showScreen('live');
+}
+
+// ============================================
+// LIVE
+// ============================================
+function setupLiveScreen(interaction) {
+  const q = interaction.type === 'poll' ? interaction.content.question :
+             interaction.type === 'quiz' ? interaction.content.questions[0].text :
+             interaction.content.prompt;
+  document.getElementById('liveQuestion').textContent = q;
+  document.getElementById('liveCodeBadge').textContent = interaction.code;
+  document.getElementById('livePartCount').textContent = '0';
+  allResponses = [];
+  renderLiveResults(interaction, []);
+  subscribeToResponses(interaction);
+  // Démarrer le minuteur si configuré
+  stopTimer();
+  const mins = interaction.options?.timer || 0;
+  if (mins > 0) {
+    setupTimer(mins);
+  } else {
+    document.getElementById('timerWrap').style.display = 'none';
+  }
+  document.getElementById('liveExportRow').style.display = 'flex';
+}
+
+function renderLiveResults(interaction, responses) {
+  const el = document.getElementById('liveResults');
+  if (interaction.type === 'poll' || interaction.type === 'quiz') {
+    const opts = interaction.type === 'poll' ? interaction.content.options : interaction.content.questions[0].answers;
+    const totals = new Array(opts.length).fill(0);
+    responses.forEach(r => {
+      const a = r.answer;
+      if (Array.isArray(a.selected)) a.selected.forEach(i => { if(i<totals.length) totals[i]++; });
+      else if (typeof a.selected === 'number' && a.selected < totals.length) totals[a.selected]++;
+    });
+    const total = totals.reduce((a,b)=>a+b,0);
+    el.innerHTML = `<div class="results-grid">${opts.map((o,i)=>{
+      const pct = total>0?Math.round(totals[i]/total*100):0;
+      const isCorrect = interaction.type==='quiz' && (interaction.content.questions[0].correct||[]).includes(i);
+      const color = isCorrect ? '#2ec4b6' : BAR_COLORS[i%BAR_COLORS.length];
+      return `<div class="result-bar-row">
+        <div class="result-label">${o}${isCorrect?' ✓':''}</div>
+        <div class="bar-track"><div class="bar-fill" style="--bar-color:${color};width:${pct}%"><span class="bar-count">${totals[i]}</span></div></div>
+        <div class="result-pct">${pct}%</div></div>`;
+    }).join('')}</div>`;
+  } else if (interaction.type === 'wordcloud') {
+    const wordMap = {};
+    responses.forEach(r => (r.answer.words||[]).forEach(w => { const k=w.toLowerCase().trim(); if(k) wordMap[k]=(wordMap[k]||0)+1; }));
+    const sorted = Object.entries(wordMap).sort((a,b)=>b[1]-a[1]).slice(0,40);
+    const max = sorted[0]?.[1]||1;
+    const sizes = ['0.9rem','1.1rem','1.3rem','1.6rem','2rem','2.5rem'];
+    el.innerHTML = `<div class="word-cloud">${sorted.map(([w,c],i)=>{
+      const sz = sizes[Math.min(Math.floor((c/max)*sizes.length),sizes.length-1)];
+      const color = BAR_COLORS[i%BAR_COLORS.length];
+      return `<div class="word-pill" style="font-size:${sz};background:${color}22;color:${color};border:1.5px solid ${color}44">${w} <sup style="font-size:.65em;opacity:.6">${c}</sup></div>`;
+    }).join('')}</div>`;
+  } else if (interaction.type === 'brainstorm') {
+    el.innerHTML = `<div class="ideas-grid">${responses.map(r=>`<div class="idea-card">${r.answer.text||''}</div>`).join('')}</div>`;
+  }
+}
+
+let allResponses = [];
+function subscribeToResponses(interaction) {
+  if (!sb || !currentSessionId || currentSessionId.startsWith('local_')) return;
+  sb.from('responses').select('*').eq('session_id', currentSessionId).then(({data}) => {
+    if (data) { allResponses = data; document.getElementById('livePartCount').textContent = data.length; renderLiveResults(interaction, data); }
+  });
+  if (realtimeSub) sb.removeChannel(realtimeSub);
+  realtimeSub = sb.channel('live_' + currentSessionId)
+    .on('postgres_changes', {event:'INSERT',schema:'public',table:'responses',filter:`session_id=eq.${currentSessionId}`}, payload => {
+      allResponses.push(payload.new);
+      document.getElementById('livePartCount').textContent = allResponses.length;
+      renderLiveResults(interaction, allResponses);
+    }).subscribe();
+}
+
+async function endSession() {
+  stopTimer();
+  if (sb && currentSessionId && !currentSessionId.startsWith('local_'))
+    await sb.from('sessions').update({ended_at: new Date().toISOString(), is_active: false}).eq('id', currentSessionId);
+  if (realtimeSub) { sb.removeChannel(realtimeSub); realtimeSub = null; }
+  showScreen('session');
+  showToast('✓ Session terminée');
+}
+
+// ============================================
+// PARTICIPATE
+// ============================================
+async function joinSession() {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const errEl = document.getElementById('joinError');
+  errEl.style.display = 'none';
+  if (code.length < 4) { errEl.textContent = '⚠ Code invalide'; errEl.style.display = 'block'; return; }
+
+  if (sb) {
+    const { data, error } = await sb.from('interactions').select('*').eq('code', code).single();
+    if (error||!data) { errEl.textContent = '❌ Code introuvable. Vérifiez et réessayez.'; errEl.style.display = 'block'; return; }
+    currentInteraction = data;
+    const { data: sess } = await sb.from('sessions').select('*').eq('interaction_id', data.id).eq('is_active', true).order('started_at',{ascending:false}).limit(1).maybeSingle();
+    currentSessionId = sess?.id || null;
+  } else {
+    const found = JSON.parse(localStorage.getItem('interactio_local')||'[]').find(i=>i.code===code);
+    if (!found) { errEl.textContent = '❌ Code introuvable (mode hors ligne).'; errEl.style.display = 'block'; return; }
+    currentInteraction = found; currentSessionId = 'local_' + Date.now();
+  }
+  renderActivityScreen(currentInteraction);
+  showScreen('activity');
+}
+
+function renderActivityScreen(interaction) {
+  const container = document.getElementById('activityContent');
+  if (!currentSessionId) {
+    container.innerHTML = `<div class="waiting-wrap"><div class="spinner"></div><p style="color:var(--mid)">En attente du lancement par l'animateur…</p></div>`;
+    if (sb) {
+      const sub = sb.channel('sess_watch_'+interaction.id)
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'sessions',filter:`interaction_id=eq.${interaction.id}`},
+          payload => { currentSessionId=payload.new.id; renderActivityForm(interaction,container); sb.removeChannel(sub); })
+        .subscribe();
+    }
+    return;
+  }
+  renderActivityForm(interaction, container);
+}
+
+function renderActivityForm(interaction, container) {
+  const meta = TYPE_META[interaction.type];
+  let html = `<div class="activity-type-tag" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}44">${meta.icon} ${meta.label}</div>`;
+  if (interaction.type === 'poll') {
+    html += `<div class="activity-question">${interaction.content.question}</div>
+      <div class="poll-options">${interaction.content.options.map((o,i)=>`<div class="poll-option" onclick="selectOption(this,'${i}')" data-idx="${i}"><div class="option-letter">${'ABCDEFGH'[i]}</div><span>${o}</span></div>`).join('')}</div>
+      <button class="btn-submit" onclick="submitPollAnswer()">Envoyer →</button>`;
+  } else if (interaction.type === 'quiz') {
+    const q = interaction.content.questions[0];
+    html += `<div class="activity-question">${q.text}</div>
+      <div class="poll-options">${q.answers.map((a,i)=>`<div class="poll-option" onclick="selectOption(this,'${i}')" data-idx="${i}" data-correct="${(q.correct||[]).includes(i)}"><div class="option-letter">${'ABCDEFGH'[i]}</div><span>${a}</span></div>`).join('')}</div>
+      <button class="btn-submit" onclick="submitQuizAnswer()">Valider →</button>`;
+  } else if (interaction.type === 'brainstorm') {
+    html += `<div class="activity-question">${interaction.content.prompt}</div>
+      <textarea class="text-response" id="brainstormInput" placeholder="Partagez votre idée ici…" rows="4"></textarea>
+      <button class="btn-submit" style="margin-top:12px" onclick="submitTextAnswer('brainstorm')">Envoyer →</button>`;
+  } else if (interaction.type === 'wordcloud') {
+    html += `<div class="activity-question">${interaction.content.prompt}</div>
+      <input class="field-input" id="wcInput" placeholder="Mot1, Mot2, Mot3…" style="font-size:1.1rem;padding:14px;margin-bottom:16px">
+      <button class="btn-submit" onclick="submitTextAnswer('wordcloud')">Envoyer →</button>`;
+  }
+  container.innerHTML = html;
+}
+
+function selectOption(el) {
+  el.closest('.poll-options').querySelectorAll('.poll-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+async function submitPollAnswer() {
+  const s = document.querySelector('.poll-option.selected');
+  if (!s) { showToast('⚠ Choisissez une option'); return; }
+  await sendResponse({selected: parseInt(s.dataset.idx)});
+  showFeedback('sent','✓ Réponse envoyée !','Merci pour votre participation.');
+}
+async function submitQuizAnswer() {
+  const s = document.querySelector('.poll-option.selected');
+  if (!s) { showToast('⚠ Choisissez une réponse'); return; }
+  const correct = s.dataset.correct === 'true';
+  await sendResponse({selected: parseInt(s.dataset.idx)});
+  showFeedback(correct?'correct':'wrong', correct?'✓ Bonne réponse !':'✗ Mauvaise réponse', correct?'Excellent travail !':'Consultez votre animateur pour la correction.');
+}
+async function submitTextAnswer(type) {
+  if (type === 'brainstorm') {
+    const text = document.getElementById('brainstormInput').value.trim();
+    if (!text) { showToast('⚠ Entrez une idée'); return; }
+    await sendResponse({text});
+  } else {
+    const raw = document.getElementById('wcInput').value.trim();
+    if (!raw) { showToast('⚠ Entrez au moins un mot'); return; }
+    await sendResponse({words: raw.split(',').map(w=>w.trim()).filter(Boolean).slice(0,3)});
+  }
+  showFeedback('sent','✓ Envoyé !','Merci pour votre contribution.');
+}
+async function sendResponse(answer) {
+  const token = getParticipantToken();
+  if (sb && currentSessionId && !currentSessionId.startsWith('local_')) {
+    await sb.from('responses').insert({session_id:currentSessionId, interaction_id:currentInteraction.id, participant_token:token, answer});
+  } else {
+    const key = 'resp_'+currentSessionId;
+    const stored = JSON.parse(localStorage.getItem(key)||'[]');
+    stored.push({answer, participant_token:token, created_at:new Date().toISOString()});
+    localStorage.setItem(key, JSON.stringify(stored));
+  }
+}
+function showFeedback(type, title, msg) {
+  document.getElementById('activityContent').innerHTML = `<div class="feedback-wrap"><div class="feedback-big ${type}">${title}</div><p style="color:var(--mid);font-size:.95rem">${msg}</p></div>`;
+}
+
+// ============================================
+// DASHBOARD
+// ============================================
+async function loadDashboard() {
+  const list = document.getElementById('dashList');
+  const idEl = document.getElementById('animatorIdDisplay');
+  const savedIdent = localStorage.getItem('animator_identifier');
+  idEl.textContent = savedIdent || (currentAnimatorId ? '#' + currentAnimatorId.slice(-6).toUpperCase() : '—');
+  let interactions = [];
+
+  if (sb && currentAnimatorId && !currentAnimatorId.startsWith('local_')) {
+    const { data, error } = await sb.from('interactions').select('*, sessions(count)').eq('animator_id', currentAnimatorId).order('created_at',{ascending:false});
+    if (error) { list.innerHTML = `<p style="color:var(--accent3)">${error.message}</p>`; return; }
+    interactions = data || [];
+  } else {
+    interactions = JSON.parse(localStorage.getItem('interactio_local')||'[]').filter(i => i.animator_id === currentAnimatorId).reverse();
+  }
+
+  if (!interactions.length) {
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--mid)">
+      <div style="font-size:3rem;margin-bottom:16px">✦</div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:8px">Aucune interaction</div>
+      <p style="font-size:.88rem">Créez votre première interaction pour commencer.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = interactions.map(i => {
+    const meta = TYPE_META[i.type]||{};
+    const sessCount = Array.isArray(i.sessions) ? i.sessions.length : 0;
+    const date = new Date(i.created_at).toLocaleDateString('fr-FR');
+    return `<div class="interaction-item" onclick="openInteraction('${i.id}')">
+      <div class="item-icon" style="background:${meta.color}22;color:${meta.color}">${meta.icon}</div>
+      <div class="item-info">
+        <div class="item-name">${i.title}</div>
+        <div class="item-meta">${meta.label} · ${date} · ${sessCount} session(s)</div>
+      </div>
+      <div class="item-code">${i.code}</div>
+      <div class="item-actions">
+        <button class="icon-btn" title="Lancer" onclick="event.stopPropagation();openInteraction('${i.id}')">▶</button>
+        <button class="icon-btn" title="Supprimer" onclick="event.stopPropagation();deleteInteraction('${i.id}')">✕</button>
+      </div></div>`;
+  }).join('');
+}
+
+async function openInteraction(id) {
+  let interaction;
+  if (sb && !id.match(/^\d{13}$/)) {
+    const { data } = await sb.from('interactions').select('*').eq('id', id).single();
+    interaction = data;
+  } else {
+    interaction = JSON.parse(localStorage.getItem('interactio_local')||'[]').find(i=>i.id===id);
+  }
+  if (!interaction) return;
+  currentInteraction = interaction; currentSessionId = null;
+  setupSessionScreen(interaction);
+  showScreen('session');
+}
+
+async function deleteInteraction(id) {
+  if (!confirm('Supprimer cette interaction et tous ses résultats ?')) return;
+  if (sb && !id.match(/^\d{13}$/)) await sb.from('interactions').delete().eq('id', id);
+  else {
+    const stored = JSON.parse(localStorage.getItem('interactio_local')||'[]').filter(i=>i.id!==id);
+    localStorage.setItem('interactio_local', JSON.stringify(stored));
+  }
+  loadDashboard(); showToast('Interaction supprimée');
+}
+
+// ============================================
+// UTILS
+// ============================================
+function copyCode() {
+  const code = document.getElementById('sessionCodeDisplay').textContent;
+  navigator.clipboard?.writeText(code).catch(()=>{});
+  showToast('📋 Code copié : ' + code);
+}
+// ============================================
+// EXPORT RÉPONSES (depuis session live)
+// ============================================
+function buildResponsesData(responses, interaction) {
+  const type = interaction.type;
+  const rows = [];
+  if (type === 'poll' || type === 'quiz') {
+    const opts = type === 'poll' ? interaction.content.options : interaction.content.questions[0].answers;
+    const totals = new Array(opts.length).fill(0);
+    responses.forEach(r => {
+      const sel = r.answer?.selected;
+      if (Array.isArray(sel)) sel.forEach(i => { if(i < totals.length) totals[i]++; });
+      else if (typeof sel === 'number' && sel < totals.length) totals[sel]++;
+    });
+    const total = totals.reduce((a,b)=>a+b,0);
+    opts.forEach((o, i) => {
+      const pct = total > 0 ? Math.round(totals[i]/total*100) : 0;
+      rows.push({ Option: o, Votes: totals[i], Pourcentage: pct + '%' });
+    });
+  } else if (type === 'brainstorm') {
+    responses.forEach((r, i) => rows.push({ '#': i+1, Idée: r.answer?.text || '' }));
+  } else if (type === 'wordcloud') {
+    const wordMap = {};
+    responses.forEach(r => (r.answer?.words||[]).forEach(w => { const k=w.toLowerCase().trim(); if(k) wordMap[k]=(wordMap[k]||0)+1; }));
+    Object.entries(wordMap).sort((a,b)=>b[1]-a[1]).forEach(([w,c]) => rows.push({ Mot: w, Occurrences: c }));
+  }
+  return rows;
+}
+
+function exportXLSX() {
+  if (!allResponses.length) { showToast('⚠ Aucune réponse à exporter'); return; }
+  exportResponsesXLSXData(allResponses, currentInteraction);
+}
+
+function exportPDF() {
+  if (!allResponses.length) { showToast('⚠ Aucune réponse à exporter'); return; }
+  exportResponsesPDFData(allResponses, currentInteraction);
+}
+
+async function exportResponsesXLSX(interactionId, title) {
+  const responses = await fetchAllResponses(interactionId);
+  const interaction = await fetchInteraction(interactionId);
+  if (!interaction) return;
+  exportResponsesXLSXData(responses, interaction);
+}
+
+function exportResponsesXLSXData(responses, interaction) {
+  const rows = buildResponsesData(responses, interaction);
+  if (!rows.length) { showToast('⚠ Aucune donnée à exporter'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  // Style header
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r:0,c})];
+    if (cell) { cell.s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '0F0E17' } } }; }
+  }
+  // Largeur colonnes
+  ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Réponses');
+  // Feuille métadonnées
+  const meta = [
+    { Champ: 'Titre', Valeur: interaction.title },
+    { Champ: 'Type', Valeur: interaction.type },
+    { Champ: 'Code', Valeur: interaction.code },
+    { Champ: 'Date', Valeur: new Date(interaction.created_at).toLocaleDateString('fr-FR') },
+    { Champ: 'Nb réponses', Valeur: responses.length },
+  ];
+  const wsMeta = XLSX.utils.json_to_sheet(meta);
+  wsMeta['!cols'] = [{ wch: 16 }, { wch: 32 }];
+  XLSX.utils.book_append_sheet(wb, wsMeta, 'Infos');
+  XLSX.writeFile(wb, `interactio_${interaction.code}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('✓ Export Excel téléchargé');
+}
+
+async function exportResponsesPDF(interactionId, title) {
+  const responses = await fetchAllResponses(interactionId);
+  const interaction = await fetchInteraction(interactionId);
+  if (!interaction) return;
+  exportResponsesPDFData(responses, interaction);
+}
+
+function exportResponsesPDFData(responses, interaction) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const margin = 18;
+  let y = margin;
+
+  // En-tête
+  doc.setFillColor(15, 14, 23);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setTextColor(255, 252, 245);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('Interactio — Résultats', margin, 12);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 170, 155);
+  doc.text(interaction.title + '  |  Code : ' + interaction.code + '  |  ' + new Date().toLocaleDateString('fr-FR'), margin, 22);
+  y = 38;
+
+  doc.setTextColor(15, 14, 23);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(interaction.title, margin, y); y += 7;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text(responses.length + ' réponse(s)  ·  ' + new Date().toLocaleString('fr-FR'), margin, y); y += 10;
+
+  const rows = buildResponsesData(responses, interaction);
+
+  if (interaction.type === 'poll' || interaction.type === 'quiz') {
+    const total = rows.reduce((s, r) => s + (r.Votes || 0), 0);
+    rows.forEach(row => {
+      if (y > 270) { doc.addPage(); y = margin; }
+      const pct = total > 0 ? (row.Votes / total) : 0;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 14, 23);
+      doc.text(row.Option || row.Mot || '', margin, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text(row.Pourcentage + ' (' + row.Votes + ')', 160, y, { align: 'right' });
+      y += 5;
+      // Barre
+      doc.setFillColor(229, 221, 208);
+      doc.rect(margin, y, 140, 5, 'F');
+      doc.setFillColor(255, 107, 53);
+      doc.rect(margin, y, 140 * pct, 5, 'F');
+      y += 10;
+    });
+  } else if (interaction.type === 'brainstorm') {
+    rows.forEach(row => {
+      if (y > 270) { doc.addPage(); y = margin; }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 14, 23);
+      doc.text('• ' + (row['Idée'] || ''), margin, y, { maxWidth: 170 });
+      y += 7;
+    });
+  } else if (interaction.type === 'wordcloud') {
+    rows.forEach(row => {
+      if (y > 270) { doc.addPage(); y = margin; }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(row.Mot + '  ×' + row.Occurrences, margin, y);
+      y += 7;
+    });
+  }
+
+  doc.save('interactio_' + interaction.code + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+  showToast('✓ Export PDF téléchargé');
+}
+
+async function fetchAllResponses(interactionId) {
+  if (!sb || !interactionId || String(interactionId).match(/^\d{13}$/)) {
+    return JSON.parse(localStorage.getItem('resp_' + currentSessionId) || '[]');
+  }
+  const { data } = await sb.from('responses').select('*').eq('interaction_id', interactionId);
+  return data || [];
+}
+
+async function fetchInteraction(interactionId) {
+  if (!sb || String(interactionId).match(/^\d{13}$/)) {
+    return JSON.parse(localStorage.getItem('interactio_local') || '[]').find(i => i.id === interactionId);
+  }
+  const { data } = await sb.from('interactions').select('*').eq('id', interactionId).single();
+  return data;
+}
+
+// ============================================
+// EXPORT / IMPORT INTERACTIONS (JSON)
+// ============================================
+async function exportInteractions() {
+  let interactions = [];
+  if (sb && currentAnimatorId && !currentAnimatorId.startsWith('local_')) {
+    const { data } = await sb.from('interactions').select('*').eq('animator_id', currentAnimatorId);
+    interactions = data || [];
+  } else {
+    interactions = JSON.parse(localStorage.getItem('interactio_local') || '[]')
+      .filter(i => i.animator_id === currentAnimatorId);
+  }
+  if (!interactions.length) { showToast('⚠ Aucune interaction à exporter'); return; }
+  const json = JSON.stringify({ version: 2, exported_at: new Date().toISOString(), interactions }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'interactio_export_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✓ ' + interactions.length + ' interaction(s) exportée(s)');
+}
+
+function triggerImport() {
+  document.getElementById('importFileInput').click();
+}
+
+async function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const interactions = parsed.interactions || (Array.isArray(parsed) ? parsed : []);
+    if (!interactions.length) { showToast('⚠ Aucune interaction trouvée dans le fichier'); return; }
+    let imported = 0;
+    for (const inter of interactions) {
+      const payload = {
+        code: genCode(), // nouveau code pour éviter les conflits
+        title: inter.title,
+        type: inter.type,
+        content: inter.content,
+        options: inter.options || {},
+        animator_id: currentAnimatorId,
+      };
+      if (sb && currentAnimatorId && !currentAnimatorId.startsWith('local_')) {
+        let attempts = 0, error = null;
+        do {
+          if (attempts > 0) payload.code = genCode();
+          attempts++;
+          ({ error } = await sb.from('interactions').insert(payload));
+        } while (error && (error.code === '23505') && attempts < 5);
+        if (!error) imported++;
+      } else {
+        const stored = JSON.parse(localStorage.getItem('interactio_local') || '[]');
+        payload.id = Date.now().toString() + Math.random().toString(36).slice(2,5);
+        payload.created_at = new Date().toISOString();
+        stored.push(payload);
+        localStorage.setItem('interactio_local', JSON.stringify(stored));
+        imported++;
+      }
+    }
+    showToast('✓ ' + imported + ' interaction(s) importée(s)');
+    loadDashboard();
+  } catch(e) {
+    showToast('❌ Fichier invalide : ' + e.message);
+  }
+  event.target.value = '';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// URL param ?join=CODE
+(function() {
+  const code = new URLSearchParams(window.location.search).get('join');
+  if (code) { document.getElementById('joinCode').value = code.toUpperCase(); setTimeout(()=>{ showScreen('participate'); joinSession(); }, 500); }
+})();
+</script>
+</body>
+</html>
